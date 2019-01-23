@@ -13,8 +13,17 @@ const MongoStore         = require('connect-mongo')(session);
 const mongoose           = require('mongoose');
 const flash              = require('connect-flash');
 const hbs                = require('hbs')
+const Profile            = require('./models/profile');
+const multer             = require('multer');
 
-mongoose.connect('mongodb://localhost:27017/tumblr-lab-development');
+mongoose
+  .connect('mongodb://localhost/lab-file-upload', {useNewUrlParser: true})
+  .then(x => {
+    console.log(`Connected to Mongo! Database name: "${x.connections[0].name}"`)
+  })
+  .catch(err => {
+    console.error('Error connecting to mongo', err)
+  });
 
 const app = express();
 
@@ -72,13 +81,24 @@ passport.use('local-signup', new LocalStrategy(
                 const {
                   username,
                   email,
-                  password
+                  password,
                 } = req.body;
+
+                const profile = Profile.find({username : user.username});
+
+                // //TODO: Ver si aquí todo bien
+                // const profile = new Profile({
+                //   name : req.body.name,
+                //   path : `/uploads/${req.file.filename}`,
+                //   originalName : req.file.originalname
+                // });
+
                 const hashPass = bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
                 const newUser = new User({
                   username,
                   email,
-                  password: hashPass
+                  password: hashPass,
+                  profilePath: profile.path
                 });
 
                 newUser.save((err) => {
