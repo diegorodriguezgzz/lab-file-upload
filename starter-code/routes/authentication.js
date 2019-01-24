@@ -21,7 +21,7 @@ router.get('/signup', ensureLoggedOut(), (req, res) => {
     res.render('authentication/signup', { message: req.flash('error') });
 });
 
-router.post('/signup', ensureLoggedOut(), (req, res, next) => {
+router.post('/signup', upload.single('profile'), ensureLoggedOut(), (req, res, next) => {
     //TODO: Ver si aquí todo bien
     const profile = new Profile({
         path: `/uploads/${req.file.filename}`,

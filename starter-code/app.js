@@ -1,23 +1,23 @@
-const express            = require('express');
-const path               = require('path');
-const favicon            = require('serve-favicon');
-const logger             = require('morgan');
-const cookieParser       = require('cookie-parser');
-const bodyParser         = require('body-parser');
-const passport           = require('passport');
-const LocalStrategy      = require('passport-local').Strategy;
-const User               = require('./models/user');
-const bcrypt             = require('bcrypt');
-const session            = require('express-session');
-const MongoStore         = require('connect-mongo')(session);
-const mongoose           = require('mongoose');
-const flash              = require('connect-flash');
-const hbs                = require('hbs')
-const Profile            = require('./models/profile');
-const multer             = require('multer');
+const express = require('express');
+const path = require('path');
+const favicon = require('serve-favicon');
+const logger = require('morgan');
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const User = require('./models/user');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
+const MongoStore = require('connect-mongo')(session);
+const mongoose = require('mongoose');
+const flash = require('connect-flash');
+const hbs = require('hbs')
+const Profile = require('./models/profile');
+const multer = require('multer');
 
 mongoose
-  .connect('mongodb://localhost/lab-file-upload', {useNewUrlParser: true})
+  .connect('mongodb://localhost/lab-file-upload', { useNewUrlParser: true })
   .then(x => {
     console.log(`Connected to Mongo! Database name: "${x.connections[0].name}"`)
   })
@@ -34,7 +34,7 @@ app.use(session({
   secret: 'tumblrlabdev',
   resave: false,
   saveUninitialized: true,
-  store: new MongoStore( { mongooseConnection: mongoose.connection })
+  store: new MongoStore({ mongooseConnection: mongoose.connection })
 }))
 
 passport.serializeUser((user, cb) => {
@@ -69,46 +69,38 @@ passport.use('local-signup', new LocalStrategy(
   (req, username, password, next) => {
     // To avoid race conditions
     process.nextTick(() => {
-        User.findOne({
-            'username': username
-        }, (err, user) => {
-            if (err){ return next(err); }
+      User.findOne({
+        'username': username
+      }, (err, user) => {
+        if (err) { return next(err); }
 
-            if (user) {
-                return next(null, false);
-            } else {
-                // Destructure the body
-                const {
-                  username,
-                  email,
-                  password,
-                } = req.body;
+        if (user) {
+          return next(null, false);
+        } else {
+          // Destructure the body
+          const {
+            username,
+            email,
+            password,
+          } = req.body;
+          const profilePath = `/uploads/${req.file.filename}`;
 
-                const profile = Profile.find({username : user.username});
+          const hashPass = bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
+          const newUser = new User({
+            username,
+            email,
+            password: hashPass,
+            profilePath
+          });
 
-                // //TODO: Ver si aquí todo bien
-                // const profile = new Profile({
-                //   name : req.body.name,
-                //   path : `/uploads/${req.file.filename}`,
-                //   originalName : req.file.originalname
-                // });
-
-                const hashPass = bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
-                const newUser = new User({
-                  username,
-                  email,
-                  password: hashPass,
-                  profilePath: profile.path
-                });
-
-                newUser.save((err) => {
-                    if (err){ next(null, false, { message: newUser.errors }) }
-                    return next(null, newUser);
-                });
-            }
-        });
+          newUser.save((err) => {
+            if (err) { next(null, false, { message: newUser.errors }) }
+            return next(null, newUser);
+          });
+        }
+      });
     });
-}));
+  }));
 
 app.use(flash());
 app.use(passport.initialize());
